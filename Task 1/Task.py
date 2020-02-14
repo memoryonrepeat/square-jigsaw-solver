@@ -1,5 +1,10 @@
 import argparse
 
+def mean(values):
+    return sum(values) / len(values)
+
+def default(values):
+    return 'Invalid task'
 
 class TaskHandler:
     """
@@ -18,35 +23,31 @@ class TaskHandler:
         
         :param msg: the message
         """
-        if msg['task_id'] not in self.task_db:
-            task_entry = {'task_name': None, 'num_values': None, 'values': []}
-            if 'task_name' in msg:
-                task_entry['task_name'] = msg['task_name']
-                task_entry['num_values'] = msg['num_values']
-            else:
-                task_entry['values'].append(msg['value'])
-            self.task_db[msg['task_id']] = task_entry
-        else:
+        task_entry = {'task_name': None, 'num_values': None, 'values': []}
+
+        if msg['task_id'] in self.task_db:
             task_entry = self.task_db[msg['task_id']]
-            if 'task_name' in msg:
-                task_entry['task_name'] = msg['task_name']
-                task_entry['num_values'] = msg['num_values']
-            else:
-                task_entry['values'].append(msg['value'])
+
+        if 'task_name' in msg:
+            task_entry['task_name'] = msg['task_name']
+            task_entry['num_values'] = msg['num_values']
+        else:
+            task_entry['values'].append(msg['value'])
+
+        self.task_db[msg['task_id']] = task_entry if msg['task_id'] not in self.task_db else self.task_db[msg['task_id']]
+
+        task_map = {
+            "sum": sum,
+            "mean": mean,
+            "max": max,
+            "min": min,
+        }
 
         if (task_entry['num_values'] is not None and
                 len(task_entry['values']) == task_entry['num_values'] and
                 task_entry['task_name'] is not None):
 
-            if task_entry['task_name'] == 'sum':
-                result = sum(task_entry['values'])
-            elif task_entry['task_name'] == 'mean':
-                result = sum(task_entry['values']) / len(task_entry['values'])
-            elif task_entry['task_name'] == 'max':
-                result = max(task_entry['values'])
-            elif task_entry['task_name'] == 'min':
-                result = min(task_entry['values'])
-
+            result = task_map.get(task_entry['task_name'], default)(task_entry['values'])
             self.output_result(result, msg['task_id'])
 
     def output_result(self, result, task_id):
