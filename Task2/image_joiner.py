@@ -21,7 +21,7 @@ class ImageJoiner:
     def __init__(self, params):
         self.params = params
         self.size = int(self.params.size)
-        self.MARGIN = 5 # margin size in pixel
+        self.MARGIN = 10 # margin size in pixel
 
     def compareHistogram(self, first, second):
         metrics = [cv2.HISTCMP_CORREL, cv2.HISTCMP_CHISQR, cv2.HISTCMP_INTERSECT, cv2.HISTCMP_BHATTACHARYYA]
@@ -35,13 +35,24 @@ class ImageJoiner:
         hist = cv2.normalize(hist, hist).flatten()
         return hist
 
-    def getMargin(self, patch):
-        left_margin = patch[:, 0:self.MARGIN]
-        return left_margin
+    def getMargin(self, patch, position):
+        patch_size = len(patch[0])
+        margin_map = {
+            "left": patch[:, 0:self.MARGIN],
+            "right": patch[:, patch_size - self.MARGIN : patch_size],
+            "top": patch[0 : self.MARGIN, :],
+            "bottom": patch[patch_size - self.MARGIN : patch_size, :],
+        }
+
+        if position not in margin_map:
+            raise Exception('Invalid position')
+
+        return margin_map[position]
 
     def solve(self):
-        first = self.getMargin(self.patches[0])
-        second = self.getMargin(self.patches[5])
+        first = self.getMargin(self.image, "left")
+        second = self.getMargin(self.patches[5], "right")
+        cv2.imwrite('cropped.png', first)
         print(self.compareHistogram(first, second))
 
     def run(self):
