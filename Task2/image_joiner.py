@@ -20,14 +20,14 @@ class ImageJoiner:
     def __init__(self, params):
         self.params = params
         self.size = int(self.params.size)
-        self.MARGIN = 20 # margin size in pixel
+        self.MARGIN = 5 # margin size in pixel
         self.solved = []
 
     def compareHistogram(self, first, second, first_side, second_side):
         metrics = [cv2.HISTCMP_CORREL, cv2.HISTCMP_CHISQR, cv2.HISTCMP_INTERSECT, cv2.HISTCMP_BHATTACHARYYA]
         histogram1 = self.calculateHistogram(self.getMargin(first, first_side))
         histogram2 = self.calculateHistogram(self.getMargin(second, second_side))
-        return cv2.compareHist(histogram1, histogram2, metrics[0])
+        return cv2.compareHist(histogram1, histogram2, metrics[2])
 
     def calculateHistogram(self, patch):
         hist = cv2.calcHist([patch], [0, 1, 2], None, [8, 8, 8],
@@ -52,8 +52,9 @@ class ImageJoiner:
     def solve(self):
         i = 1
         self.solved.append(self.patches[0])
-        current = self.patches[0]
         self.patches.pop(0)
+        current = self.solved[0]
+        
         while len(self.patches) > 0:
             if i < self.row_count and i % self.row_count != 0: # first row, only compare left margin
                 print(i, "first row")
