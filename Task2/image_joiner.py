@@ -2,7 +2,6 @@ import cv2
 import random
 import argparse
 import numpy as np
-
 """
 
 Reads in n x n small images and join them based on original order
@@ -21,12 +20,13 @@ class ImageJoiner:
     def __init__(self, params):
         self.params = params
         self.size = int(self.params.size)
-        self.MARGIN = 10 # margin size in pixel
+        self.MARGIN = 20 # margin size in pixel
+        self.solved = []
 
-    def compareHistogram(self, first, second):
+    def compareHistogram(self, first, second, first_side, second_side):
         metrics = [cv2.HISTCMP_CORREL, cv2.HISTCMP_CHISQR, cv2.HISTCMP_INTERSECT, cv2.HISTCMP_BHATTACHARYYA]
-        histogram1 = self.calculateHistogram(first)
-        histogram2 = self.calculateHistogram(second)
+        histogram1 = self.calculateHistogram(self.getMargin(first, first_side))
+        histogram2 = self.calculateHistogram(self.getMargin(second, second_side))
         return cv2.compareHist(histogram1, histogram2, metrics[0])
 
     def calculateHistogram(self, patch):
@@ -50,10 +50,25 @@ class ImageJoiner:
         return margin_map[position]
 
     def solve(self):
-        first = self.getMargin(self.image, "left")
-        second = self.getMargin(self.patches[5], "right")
-        cv2.imwrite('cropped.png', first)
-        print(self.compareHistogram(first, second))
+        i = 1
+        self.solved.append(self.patches[0])
+        current = self.patches[0]
+        self.patches.pop(0)
+        while len(self.patches) > 0:
+            if i < self.row_count and i % self.row_count != 0: # first row, only compare left margin
+                print(i, "first row")
+                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(current, tuple[1], "right", "left"))[0]
+            elif i % self.row_count == 0: # first column, only compare top margin to the one right above
+                print(i, "first column")
+                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(self.solved[i-self.row_count], tuple[1], "bottom", "top"))[0]
+            else: # the rest --> compare to right of current and bottom of the above
+                print(i, "rest")
+                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(current, tuple[1], "right", "left") + self.compareHistogram(self.solved[i-self.row_count], tuple[1], "bottom", "top"))[0]
+            current = most_fit[1]
+            self.solved.append(current)
+            self.patches.pop(most_fit[0])
+            i += 1
+
 
     def run(self):
         image = cv2.imread(self.params.image)
@@ -66,6 +81,7 @@ class ImageJoiner:
         image = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
         offset = int(self.size / 2)
         row_count = int((image.shape[0] - offset) / self.size / 1.5)
+        self.row_count = row_count
 
         new_image_size = int(row_count * self.size)
         output = np.zeros((new_image_size, new_image_size, 4)) # 4 = number of color channels
@@ -80,7 +96,7 @@ class ImageJoiner:
         index_count = 0
         for column in range(0, row_count):
             for row in range(0, row_count):
-                output[top_point : top_point + self.size, left_point : left_point + self.size, :] = self.patches[index_count]
+                output[top_point : top_point + self.size, left_point : left_point + self.size, :] = self.solved[index_count]
                 left_point += self.size
                 index_count += 1
             left_point = 0
