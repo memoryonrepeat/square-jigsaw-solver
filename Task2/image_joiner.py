@@ -27,7 +27,7 @@ class ImageJoiner:
         metrics = [cv2.HISTCMP_CORREL, cv2.HISTCMP_CHISQR, cv2.HISTCMP_INTERSECT, cv2.HISTCMP_BHATTACHARYYA]
         histogram1 = self.calculateHistogram(self.getMargin(first, first_side))
         histogram2 = self.calculateHistogram(self.getMargin(second, second_side))
-        return cv2.compareHist(histogram1, histogram2, metrics[2])
+        return cv2.compareHist(histogram1, histogram2, metrics[0])
 
     def calculateHistogram(self, patch):
         hist = cv2.calcHist([patch], [0, 1, 2], None, [8, 8, 8],
@@ -54,17 +54,16 @@ class ImageJoiner:
         self.solved.append(self.patches[0])
         self.patches.pop(0)
         current = self.solved[0]
-        
         while len(self.patches) > 0:
             if i < self.row_count and i % self.row_count != 0: # first row, only compare left margin
                 print(i, "first row")
-                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(current, tuple[1], "right", "left"))[0]
+                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(current, tuple[1], "right", "left"), reverse=True)[0]
             elif i % self.row_count == 0: # first column, only compare top margin to the one right above
                 print(i, "first column")
-                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(self.solved[i-self.row_count], tuple[1], "bottom", "top"))[0]
+                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(self.solved[i-self.row_count], tuple[1], "bottom", "top"), reverse=True)[0]
             else: # the rest --> compare to right of current and bottom of the above
                 print(i, "rest")
-                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(current, tuple[1], "right", "left") + self.compareHistogram(self.solved[i-self.row_count], tuple[1], "bottom", "top"))[0]
+                most_fit = sorted(enumerate(self.patches), key=lambda tuple: self.compareHistogram(current, tuple[1], "right", "left") + self.compareHistogram(self.solved[i-self.row_count], tuple[1], "bottom", "top"), reverse=True)[0]
             current = most_fit[1]
             self.solved.append(current)
             self.patches.pop(most_fit[0])
