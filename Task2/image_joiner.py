@@ -10,7 +10,6 @@ Assuming offset = size / 2
 Input parameters:
     -i, --image: path to the original puzzle
     -o, --output: path where the processed image should be saved (path + filename)
-    -s, --size: size of each patch
 
 Be aware that the image must be the same size in width and height.
 """
@@ -19,8 +18,7 @@ class ImageJoiner:
 
     def __init__(self, params):
         self.params = params
-        self.size = int(self.params.size)
-        self.MARGIN = 5 # margin size in pixel
+        self.MARGIN = 10 # margin size in pixel
         self.solved = []
 
     def compareHistogram(self, first, second, first_side, second_side):
@@ -30,8 +28,7 @@ class ImageJoiner:
         return cv2.compareHist(histogram1, histogram2, metrics[0])
 
     def calculateHistogram(self, patch):
-        hist = cv2.calcHist([patch], [0, 1, 2], None, [8, 8, 8],
-        [0, 256, 0, 256, 0, 256])
+        hist = cv2.calcHist([patch], [0, 1, 2], None, [8, 8, 8], [0, 256, 0, 256, 0, 256])
         hist = cv2.normalize(hist, hist).flatten()
         return hist
 
@@ -79,7 +76,10 @@ class ImageJoiner:
             exit(1)
 
         image = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
-        offset = int(self.size / 2)
+        offset = next(i for i in range(0, image.shape[0]) if image[i][i][0] != 0 or image[i][i][1] != 0 or image[i][i][2] != 0)
+        self.size = offset * 2
+
+        # offset = int(self.size / 2)
         row_count = int((image.shape[0] - offset) / self.size / 1.5)
         self.row_count = row_count
 
@@ -108,7 +108,6 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--image", required=True, help="input image")
     ap.add_argument("-o", "--output", required=True, help="output path of the image")
-    ap.add_argument("-s", "--size", required=True, help="size of the cubes")
 
     args = ap.parse_args()
 
