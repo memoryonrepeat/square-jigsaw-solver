@@ -76,7 +76,9 @@ class ImageJoiner:
             exit(1)
 
         image = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
-        offset = next(i for i in range(0, image.shape[0]) if image[i][i][0] != 0 or image[i][i][1] != 0 or image[i][i][2] != 0)
+        # offset = next(i for i in range(0, image.shape[0]) if image[i][i][0] != 0 or image[i][i][1] != 0 or image[i][i][2] != 0)
+        offset = next(i for i in range(0, image.shape[0]) if any(image[i][j][k] != 0 for j in range(0, image.shape[0]) for k in range(0, 3)))
+        print(offset)
         self.size = offset * 2
 
         # offset = int(self.size / 2)
